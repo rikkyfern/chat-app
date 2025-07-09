@@ -2,7 +2,10 @@ let target = document.getElementById("targetUser").value;
 let ws;
 
 function connect() {
-    ws = new WebSocket(`ws://${location.host}/ws/${target}`);
+    // Gunakan 'wss://' jika halaman pakai HTTPS
+    const protocol = location.protocol === "https:" ? "wss" : "ws";
+    ws = new WebSocket(`${protocol}://${location.host}/ws/${target}`);
+
     const chatBox = document.getElementById("chat-box");
     chatBox.innerHTML = "";
 
@@ -11,17 +14,24 @@ function connect() {
         const msgDiv = document.createElement("div");
         msgDiv.classList.add("chat-message");
 
-        const sender = text.match(/\\[(.*?)\\]/)?.[1] || "??";
+        const sender = text.match(/\[(.*?)\]/)?.[1] || "??";
         msgDiv.classList.add(sender === username ? "me" : "other");
         msgDiv.textContent = text;
         chatBox.appendChild(msgDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
     };
+
+    ws.onclose = () => {
+        console.warn("WebSocket closed, attempting reconnect in 3s...");
+        setTimeout(connect, 3000); // auto reconnect jika perlu
+    };
 }
 
 function switchTarget(newTarget) {
     target = newTarget;
-    ws.close();
+    if (ws.readyState === WebSocket.OPEN) {
+        ws.close();
+    }
     connect();
 }
 
